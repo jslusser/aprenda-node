@@ -22,9 +22,12 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use sp_session::runtime_decl_for_SessionKeys::SessionKeys;
+use frame_support::pallet_prelude::IsType;
 
 ///JCS added
-use frame_support::pallet_prelude::Get;
+/// use frame_support::pallet_prelude::Get;
+use frame_system::EnsureRoot;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -38,6 +41,7 @@ pub use frame_support::{
 	},
 	StorageValue,
 };
+
 
 pub use frame_system::Call as SystemCall;
 pub use pallet_assets::Call as AssetsCall;
@@ -90,7 +94,7 @@ pub mod opaque {
 		pub struct SessionKeys {
 			pub aura: Aura,
 			pub grandpa: Grandpa,
-			/// pub assets: Assets,
+			
 		}
 	}
 }
@@ -149,21 +153,10 @@ parameter_types! {
 		::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
 	pub const SS58Prefix: u8 = 42;
 
-	/// JCS Tryng to add the parameter_types (defining constant values) for the pallet_assets; See line 223 for configuration
-	pub const Event: Event
-	pub const Balance: Balance
-	pub const AssetId: AssetId
-	pub const Currency: Currency
-	pub const ForceOrigin: ForceOrigin
-	pub const AssetDeposit: AssetDeposit
-	pub const AssetAccountDeposit: AssetAccountDeposit
-	pub const MetadataDepositBase: MetadataDepositBase
-	pub const MetadataDepositPerByte: MetadataDepositPerByte
-	pub const ApprovalDeposit: ApprovalDeposit
-	pub const StringLimit: StringLimit
-	pub const Freezer: Freezer
-	pub const Extra: Extra
-	pub const WeightInfo: WeightInfo
+	pub const AssetDeposit: u128;
+
+
+
 
 }
 
@@ -224,21 +217,36 @@ impl frame_system::Config for Runtime {
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 /// JCS Trying to configure the types and values defined by the Config - see line 148
+
+parameter_types! {
+	
+	
+	pub const MILLICENTS: Balance = 1_000_000_000;
+	pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
+	pub const DOLLARS: Balance = 100 * CENTS;
+	
+	pub const AssetDeposit: Balance = 100 * DOLLARS;
+	pub const ApprovalDeposit: Balance = 1 * DOLLARS;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
+	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
+}
 impl pallet_assets::Config for Runtime {
-	type Event: From<Event<Self, I>> + IsType<<Self as Config>::Event>;
-    type Balance: Member + Parameter + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize + MaxEncodedLen + TypeInfo;
-    type AssetId: Member + Parameter + Default + Copy + HasCompact + MaybeSerializeDeserialize + MaxEncodedLen + TypeInfo;
-    type Currency: ReservableCurrency<Self::AccountId>;
-    type ForceOrigin: EnsureOrigin<Self::Origin>;
-    type AssetDeposit: Get<<<Self as Config<I>>::Currency as Currency<<Self as SystemConfig>::AccountId>>::Balance>;
-    type AssetAccountDeposit: Get<<<Self as Config<I>>::Currency as Currency<<Self as SystemConfig>::AccountId>>::Balance>;
-    type MetadataDepositBase: Get<<<Self as Config<I>>::Currency as Currency<<Self as SystemConfig>::AccountId>>::Balance>;
-    type MetadataDepositPerByte: Get<<<Self as Config<I>>::Currency as Currency<<Self as SystemConfig>::AccountId>>::Balance>;
-    type ApprovalDeposit: Get<<<Self as Config<I>>::Currency as Currency<<Self as SystemConfig>::AccountId>>::Balance>;
-    type StringLimit: Get<u32>;
-    type Freezer: FrozenBalance<Self::AssetId, Self::AccountId, Self::Balance>;
-    type Extra: Member + Parameter + Default + MaxEncodedLen;
-    type WeightInfo: WeightInfo;
+	
+	type Balance = u128;
+	type AssetId = u32;
+	type Currency = Balances;
+    type Event = Event;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = ConstU128<{ DOLLARS }>;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = StringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_aura::Config for Runtime {
